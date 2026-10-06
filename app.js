@@ -145,6 +145,57 @@ MINOR.moods = {
   '7>0': ['Catharsis', 'dark tension finally breaks'],
   '7>5': ['Heartbreak', 'resolution denied — a sad surprise'],
 };
+// Spice: chords from outside the key that give music its goosebumps.
+// iv = interval from the tonic; after = key chords it follows well; next = where it wants to go
+// (numbers are key-chord indices, strings are other spice ids); res = the mood of resolving it.
+MAJOR.spice = [
+  { id: 'V/V',  iv: 2,  q: 'maj', fn: 'D', num: 'V/V',  after: [0, 1, 3], next: [4],
+    mood: ['Pull', 'borrowed tension leaning hard into V'], res: ['Arrival', 'the pull finally lands'],
+    text: 'A secondary dominant: the V of V. Its raised note pulls straight into V.' },
+  { id: 'V/vi', iv: 4,  q: 'maj', fn: 'D', num: 'V/vi', after: [0, 3], next: [5, 3],
+    mood: ['Longing', 'a bright chord that aches toward the minor'], res: ['Falling into it', 'release into sadness'],
+    text: 'The secondary dominant of vi. It makes the relative minor feel like a destination.' },
+  { id: 'iv',   iv: 5,  q: 'min', fn: 'S', num: 'iv',   after: [3], next: [0],
+    mood: ['Heartache', 'the major IV turns minor — pure nostalgia'], res: ['Bittersweet home', 'home again, but changed'],
+    text: 'Borrowed from the parallel minor. IV → iv → I is the classic tearjerker.' },
+  { id: 'bVI',  iv: 8,  q: 'maj', fn: 'S', num: '♭VI',  after: [0, 3, 5], next: ['bVII', 4],
+    mood: ['Cinematic lift', 'a sudden widescreen swell'], res: ['Epic climb', 'rising toward the summit'],
+    text: 'Borrowed from minor. Big, cinematic and a little bittersweet.' },
+  { id: 'bVII', iv: 10, q: 'maj', fn: 'D', num: '♭VII', after: [3], next: [0],
+    mood: ['Swagger', 'a confident, rock-and-roll stride'], res: ['Triumphant return', 'landing home like a hero'],
+    text: 'Borrowed from Mixolydian. ♭VII → I is the triumphant landing of rock and film scores.' },
+  { id: 'bIII', iv: 3,  q: 'maj', fn: 'T', num: '♭III', after: [0], next: [3, 'bVII'],
+    mood: ['Bluesy shadow', 'a smoky, unexpected turn'], res: ['Strut', 'shaking it off and moving on'],
+    text: 'Borrowed from minor. Gives a bluesy, rock flavour.' },
+];
+MINOR.spice = [
+  { id: 'I',     iv: 0,  q: 'maj',  fn: 'T', num: 'I',     after: [7, 4], next: [3],
+    mood: ['Sunburst', 'a surprise major ending — light breaks through'], res: ['Afterglow', 'the warmth lingers'],
+    text: 'The Picardy third: ending a minor piece on a major tonic.' },
+  { id: 'IV',    iv: 5,  q: 'maj',  fn: 'S', num: 'IV',    after: [0], next: [0],
+    mood: ['Dorian glow', 'a warm, soulful lift'], res: ['Soulful return', 'easing back into the groove'],
+    text: 'Borrowed from Dorian. The raised 6th gives minor a soulful, jazzy lift.' },
+  { id: 'bII',   iv: 1,  q: 'maj',  fn: 'S', num: '♭II',   after: [0, 3, 5], next: [7],
+    mood: ['Dramatic', 'a dark, operatic swerve'], res: ['Drama peaks', 'the curtain rises on the climax'],
+    text: 'The Neapolitan chord. Dark and dramatic, it sets up V.' },
+  { id: 'V/V',   iv: 2,  q: 'maj',  fn: 'D', num: 'V/V',   after: [0, 5], next: [7],
+    mood: ['Pull', 'tension leaning hard into V'], res: ['Arrival', 'the pull finally lands'],
+    text: 'A secondary dominant pulling into V.' },
+  { id: 'vii°7', iv: 11, q: 'dim7', fn: 'D', num: 'vii°7', after: [3, 5], next: [0],
+    mood: ['Hair-raising', 'maximum suspense before home'], res: ['Snap home', 'tension released all at once'],
+    text: 'The full diminished seventh: stacked minor thirds, all tension, resolving up to i.' },
+];
+MAJOR.progs.push(
+  { name: 'Heartache',  degs: [0, 3, 'iv', 0],        text: 'I → IV → iv → I. The IV turns minor for a moment — instant nostalgia.' },
+  { name: 'Cinematic',  degs: [0, 'bVI', 'bVII', 0],  text: 'I → ♭VI → ♭VII → I. Borrowed chords build a widescreen, heroic climb home.' },
+  { name: 'Secondary',  degs: [0, 'V/V', 4, 0],       text: 'I → V/V → V → I. A borrowed dominant leans hard into V for extra drive.' },
+  { name: 'Creep',      degs: [0, 'V/vi', 3, 'iv'],   text: 'I → V/vi → IV → iv. Bright, aching, hopeful, then heartbroken.' },
+);
+MINOR.progs.push(
+  { name: 'Picardy',    degs: [0, 3, 7, 'I'],         text: 'i → iv → V → I. A minor story with a surprise major ending.' },
+  { name: 'Neapolitan', degs: [0, 'bII', 7, 0],       text: 'i → ♭II → V → i. A dark, operatic swerve before home.' },
+  { name: 'Dorian',     degs: [0, 'IV', 0, 'IV'],     text: 'i → IV, back and forth. The soulful minor of countless grooves.' },
+);
 const SYS = () => S.minor ? MINOR : MAJOR;
 
 // Any move, even outside the key: curated if we know it, otherwise read from the root motion
@@ -154,6 +205,11 @@ function moodOf(from, to) {
     const m = SYS().moods[`${a.deg}>${b.deg}`];
     if (m) return m;
   }
+  if (a.spice && !sameChord(from, to)) {
+    const sp = SYS().spice.find(x => x.id === a.spice);
+    if (sp && sp.next[0] === (b.spice || b.deg)) return sp.res; // its main destination
+  }
+  if (b.spice && !sameChord(from, to)) return b.mood;
   if (sameChord(from, to)) return ['Steady', 'holding still and letting it ring'];
   const iv = mod(to.root - from.root, 12);
   const dark = q => q === 'min' || q === 'dim' || q === 'dim7';
@@ -180,7 +236,7 @@ const S = {
   bloom: 0.35, bloomVel: 0,
   mode: 'explore', current: null, seq: [], sel: -1, bpm: 92, prog: 0, playing: false,
   voices: [], blobA: [0, 120, 240], blobT: [0, 120, 240], blobAlpha: 0, liveAmp: 0, liveUntil: 0,
-  waveColor: COL.mint,
+  waveColor: COL.mint, style: 'ballad', colour: 1,
 };
 
 const noteName = (pc, k = S.key) => (k === 6 && pc === 5) ? 'E♯' : (keyUsesSharps(k) ? SHARP : FLAT)[pc];
@@ -192,8 +248,15 @@ const keyChords = (k = S.key) => {
 // just the seven chords built on the scale
 const diatonic = (k = S.key) => keyChords(k).filter(d => !d.extra);
 const sameChord = (a, b) => !!a && !!b && a.root === b.root && a.q === b.q;
+const spiceChords = (k = S.key) => {
+  const sys = SYS();
+  return sys.spice.map(sp => ({ root: mod(sys.tonicPc(k) + sp.iv, 12), q: sp.q, num: sp.num, fn: sp.fn, deg: -1,
+    spice: sp.id, viz: ['drop'], text: sp.text, mood: sp.mood }));
+};
+const spiceById = id => spiceChords().find(c => c.spice === id);
 function analyse(ch, k = S.key) {
-  return keyChords(k).find(d => sameChord(d, ch)) || { root: ch.root, q: ch.q, num: null, fn: 'X', deg: -1 };
+  return keyChords(k).find(d => sameChord(d, ch)) || spiceChords(k).find(d => sameChord(d, ch)) ||
+    { root: ch.root, q: ch.q, num: null, fn: 'X', deg: -1 };
 }
 function rootSpell(ch) {
   if (ch.q === 'maj') return outerRoot(outerIdx(ch.root));
@@ -203,6 +266,55 @@ function rootSpell(ch) {
 const chordName = ch => rootSpell(ch) + QSUF[ch.q];
 const chordFull = ch => rootSpell(ch) + QNAME[ch.q];
 const chordPcs = ch => IVL[ch.q].map(v => mod(ch.root + v, 12));
+// Chord colours. iv = intervals above the root; suf replaces the plain quality suffix.
+const EXTS = {
+  maj7:  { iv: [0, 4, 7, 11],     suf: 'maj7',  feel: 'dreamy and open' },
+  '7':   { iv: [0, 4, 7, 10],     suf: '7',     feel: 'bluesy, with a pull to move on' },
+  '6':   { iv: [0, 4, 7, 9],      suf: '6',     feel: 'sweet and vintage' },
+  add9:  { iv: [0, 4, 7, 14],     suf: 'add9',  feel: 'bright and shimmering' },
+  maj9:  { iv: [0, 4, 7, 11, 14], suf: 'maj9',  feel: 'lush and cinematic' },
+  '9':   { iv: [0, 4, 7, 10, 14], suf: '9',     feel: 'rich and funky' },
+  sus2:  { iv: [0, 2, 7],         suf: 'sus2',  feel: 'airy, neither happy nor sad' },
+  sus4:  { iv: [0, 5, 7],         suf: 'sus4',  feel: 'suspended — it wants to fall back' },
+  m7:    { iv: [0, 3, 7, 10],     suf: 'm7',    feel: 'mellow and soulful' },
+  m9:    { iv: [0, 3, 7, 10, 14], suf: 'm9',    feel: 'smoky and sophisticated' },
+  madd9: { iv: [0, 3, 7, 14],     suf: 'madd9', feel: 'tender and aching' },
+  m6:    { iv: [0, 3, 7, 9],      suf: 'm6',    feel: 'noir and mysterious' },
+  hd7:   { iv: [0, 3, 6, 10],     suf: 'ø7',    feel: 'jazzy, unresolved tension' },
+  dim7x: { iv: [0, 3, 6, 9],      suf: '°7',    feel: 'hair-raising suspense' },
+};
+const FLAVORS = {
+  maj: ['auto', 'triad', 'maj7', '7', '6', 'add9', 'maj9', '9', 'sus2', 'sus4'],
+  min: ['auto', 'triad', 'm7', 'm9', 'madd9', 'm6', 'sus2', 'sus4'],
+  dim: ['auto', 'triad', 'hd7', 'dim7x'],
+};
+const COLOURS = ['Plain', 'Rich', 'Lush'];
+// spell a note the way its chord is spelled (A♭ chords get flats, F♯ chords get sharps)
+function spellIn(pc, ch) {
+  const r = rootSpell(ch);
+  if (r.includes('♭')) return FLAT[pc];
+  if (r.includes('♯')) return SHARP[pc];
+  return noteName(pc);
+}
+// the colour a chord gets automatically, by its role in the key
+function autoExt(ch, a, level) {
+  if (!level || ch.q === 'aug' || ch.q === 'dim7') return '';
+  if (ch.q === 'dim') return 'hd7';
+  if (ch.q === 'min') return level === 1 ? 'm7' : 'm9';
+  const dom = a.fn === 'D';
+  return level === 1 ? (dom ? '7' : 'maj7') : (dom ? '9' : 'maj9');
+}
+// what will actually sound: the chord, its colour, and which note is in the bass
+function resolve(ch) {
+  const a = analyse(ch);
+  const ext = ch.ext && ch.ext !== 'auto' ? (ch.ext === 'triad' ? '' : ch.ext) : autoExt(ch, a, S.colour);
+  const iv = ext ? EXTS[ext].iv : IVL[ch.q];
+  const inv = ch.inv || 0;
+  const bassPc = mod(ch.root + (inv === 1 ? iv[1] : inv === 2 ? iv[2] : 0), 12);
+  let label = rootSpell(ch) + (ext ? EXTS[ext].suf : QSUF[ch.q]);
+  if (inv) label += '/' + spellIn(bassPc, ch);
+  return { root: ch.root, q: ch.q, ext, iv, inv, bassPc, label, a, pcs: [...new Set(iv.map(v => mod(ch.root + v, 12)))] };
+}
 const keyRoot = (k = S.key, minor = S.minor) => minor ? innerRoot(k) : outerRoot(k);
 const keyName = () => keyRoot() + (S.minor ? ' minor' : ' major');
 
@@ -218,7 +330,7 @@ const retrigger = (node, cls) => { node.classList.remove(cls); void node.getBoun
 
 /* ================= persistence ================= */
 function save() {
-  try { localStorage.setItem('circle5', JSON.stringify({ key: S.key, minor: S.minor, view: S.view, seq: S.seq, bpm: S.bpm, prog: S.prog })); } catch (e) {}
+  try { localStorage.setItem('circle5', JSON.stringify({ key: S.key, minor: S.minor, view: S.view, seq: S.seq, bpm: S.bpm, prog: S.prog, style: S.style, colour: S.colour })); } catch (e) {}
 }
 function load() {
   try {
@@ -227,8 +339,11 @@ function load() {
       S.key = mod(d.key | 0, 12);
       S.minor = !!d.minor;
       if (['circle', 'tonnetz', 'clock'].includes(d.view)) S.view = d.view;
-      S.seq = Array.isArray(d.seq) ? d.seq.filter(c => c && IVL[c.q] && c.root >= 0 && c.root < 12).slice(0, 16) : [];
+      S.seq = Array.isArray(d.seq) ? d.seq.filter(c => c && IVL[c.q] && c.root >= 0 && c.root < 12)
+        .map(c => ({ root: c.root, q: c.q, ...(EXTS[c.ext] || c.ext === 'triad' ? { ext: c.ext } : {}), ...([1, 2].includes(c.inv) ? { inv: c.inv } : {}) })).slice(0, 16) : [];
       S.bpm = Math.min(180, Math.max(48, d.bpm | 0 || 92));
+      if (STYLES[d.style]) S.style = d.style;
+      if ([0, 1, 2].includes(d.colour)) S.colour = d.colour;
       S.prog = Math.min(SYS().progs.length - 1, Math.max(0, d.prog | 0));
     }
   } catch (e) {}
@@ -261,22 +376,58 @@ function impulse(sec) {
 }
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
-function tone(midi, t, dur, vel, bass) {
-  const f = mtof(midi);
-  const g = AC.createGain(), lp = AC.createBiquadFilter();
-  lp.type = 'lowpass'; lp.frequency.value = bass ? 700 : 2600; lp.Q.value = 0.3;
-  const o1 = AC.createOscillator(); o1.type = 'sine'; o1.frequency.value = f;
-  const o2 = AC.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f; o2.detune.value = bass ? 0 : 7;
-  const g2 = AC.createGain(); g2.gain.value = bass ? 0.6 : 0.35;
-  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(lp); lp.connect(master);
-  if (!bass) lp.connect(wet);
-  const rel = bass ? 0.25 : 0.9;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vel, t + 0.015);
-  g.gain.setTargetAtTime(vel * 0.55, t + 0.015, 0.3);
-  g.gain.setTargetAtTime(0, t + dur, rel / 4);
-  const end = t + dur + rel * 1.6;
-  o1.start(t); o2.start(t); o1.stop(end); o2.stop(end);
+// Instruments: 'pad' (soft, sustained), 'keys' (electric piano), 'pluck' (guitar-ish), 'bass'.
+// A boolean kind is accepted for older callers: true = bass, false = keys.
+function tone(midi, t, dur, vel, kind) {
+  if (kind === true) kind = 'bass';
+  if (!kind) kind = 'keys';
+  const f = mtof(midi), g = AC.createGain();
+  const out = AC.createBiquadFilter();
+  out.type = 'lowpass'; out.Q.value = 0.3;
+  g.connect(out); out.connect(master);
+  if (kind !== 'bass') out.connect(wet);
+  const oscs = [];
+  const osc = (type, freq) => { const o = AC.createOscillator(); o.type = type; o.frequency.value = freq; oscs.push(o); return o; };
+  let end;
+  if (kind === 'keys') {
+    // two-operator FM: a warm electric-piano tine that mellows as it rings
+    out.frequency.value = 4200;
+    const car = osc('sine', f), modu = osc('sine', f), idx = AC.createGain();
+    idx.gain.setValueAtTime(f * 1.6, t);
+    idx.gain.exponentialRampToValueAtTime(f * 0.12, t + 0.7);
+    modu.connect(idx); idx.connect(car.frequency);
+    car.connect(g);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.006);
+    g.gain.setTargetAtTime(vel * 0.22, t + 0.01, 0.55);
+    g.gain.setTargetAtTime(0, t + dur, 0.09);
+    end = t + dur + 0.6;
+  } else if (kind === 'pluck') {
+    out.frequency.setValueAtTime(5000, t);
+    out.frequency.exponentialRampToValueAtTime(900, t + 0.35);
+    const a = osc('triangle', f), b = osc('sawtooth', f * 1.002), bg = AC.createGain();
+    bg.gain.value = 0.18;
+    a.connect(g); b.connect(bg); bg.connect(g);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.004);
+    g.gain.setTargetAtTime(vel * 0.08, t + 0.006, 0.28);
+    g.gain.setTargetAtTime(0, t + dur, 0.07);
+    end = t + dur + 0.5;
+  } else {
+    const bass = kind === 'bass';
+    out.frequency.value = bass ? 700 : 2400;
+    const a = osc('sine', f), b = osc('triangle', f), bg = AC.createGain();
+    b.detune.value = bass ? 0 : 7;
+    bg.gain.value = bass ? 0.6 : 0.35;
+    a.connect(g); b.connect(bg); bg.connect(g);
+    const rel = bass ? 0.25 : 0.9;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + (bass ? 0.01 : 0.03));
+    g.gain.setTargetAtTime(vel * (bass ? 0.7 : 0.55), t + 0.03, bass ? 0.4 : 0.3);
+    g.gain.setTargetAtTime(0, t + dur, rel / 4);
+    end = t + dur + rel * 1.6;
+  }
+  oscs.forEach(o => { o.start(t); o.stop(end); });
 }
 function blip() {
   if (!AC) return;
@@ -286,21 +437,129 @@ function blip() {
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
   o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.06);
 }
-// close voicing between G#3 and G4 so chord changes move smoothly, plus a bass root
-function voicing(ch) {
-  const notes = chordPcs(ch).map(pc => { let m = 60 + pc; while (m > 67) m -= 12; while (m < 56) m += 12; return m; }).sort((a, b) => a - b);
-  return { notes, bass: 36 + ch.root };
+
+/* ================= voice leading ================= */
+// Each chord is voiced to move as little as possible from the last one, with extra care for the
+// top note (the line your ear follows). Bigger chords drop the root up top — the bass has it.
+let lastVoice = null, lastBass = 43;
+function voiceChord(rc, prev = lastVoice) {
+  let upper = rc.iv.map(v => mod(rc.root + v, 12));
+  if (upper.length >= 4) upper = upper.slice(1);
+  upper = [...new Set(upper)];
+  const n = upper.length;
+  let best = null, bestCost = Infinity;
+  for (let r = 0; r < n; r++) {
+    const order = upper.slice(r).concat(upper.slice(0, r));
+    for (let base = 50; base <= 64; base++) {
+      if (mod(base, 12) !== order[0]) continue;
+      const notes = [base];
+      for (let i = 1; i < n; i++) { let m = notes[i - 1] + 1; while (mod(m, 12) !== order[i]) m++; notes.push(m); }
+      if (notes[n - 1] > 74) continue;
+      const avg = notes.reduce((a, b) => a + b, 0) / n;
+      let cost = Math.abs(avg - 61) * 0.45; // stay in a warm middle register
+      if (prev) {
+        const near = (m, set) => Math.min(...set.map(p => Math.abs(p - m)));
+        cost += notes.reduce((acc, m) => acc + near(m, prev), 0) + prev.reduce((acc, p) => acc + near(p, notes), 0) * 0.5;
+        cost += Math.abs(notes[n - 1] - prev[prev.length - 1]) * 1.5; // a smooth, singable top line
+      } else {
+        cost += Math.abs(notes[n - 1] - 67) * 0.3;
+      }
+      if (cost < bestCost) { bestCost = cost; best = notes; }
+    }
+  }
+  // bass: the nearest octave to where it was, so it walks rather than leaps
+  let bass = 36 + rc.bassPc, bd = Infinity;
+  for (let m = 34 + mod(rc.bassPc - 34, 12) - 12; m <= 52; m += 12) {
+    if (m < 33) continue;
+    const d = Math.abs(m - lastBass) + Math.abs(m - 42) * 0.3;
+    if (d < bd) { bd = d; bass = m; }
+  }
+  return { notes: best, bass, top: best[best.length - 1], label: rc.label, pcs: rc.pcs, rc };
 }
-function scheduleChord(ch, t, dur, bar) {
-  const v = voicing(ch);
-  v.notes.forEach((m, j) => tone(m, t + j * 0.014, dur, 0.15, false));
-  tone(v.bass, t, bar ? bar * 0.45 : dur, 0.22, true);
-  if (bar) tone(v.bass, t + bar / 2, bar * 0.4, 0.15, true);
+const voiceFor = ch => { const v = voiceChord(resolve(ch)); lastVoice = v.notes; lastBass = v.bass; return v; };
+
+/* ================= playing styles ================= */
+// Each style turns one chord into a bar of music. Times and lengths are in beats.
+const STYLES = {
+  pad:    { name: 'Pad',      beats: 4, inst: 'pad' },
+  pulse:  { name: 'Pulse',    beats: 4, inst: 'keys' },
+  arp:    { name: 'Arpeggio', beats: 4, inst: 'keys' },
+  strum:  { name: 'Strum',    beats: 4, inst: 'pluck' },
+  ballad: { name: 'Ballad',   beats: 4, inst: 'keys' },
+  waltz:  { name: 'Waltz',    beats: 3, inst: 'keys' },
+  bossa:  { name: 'Bossa',    beats: 4, inst: 'keys' },
+};
+const fifthOf = b => (b + 7 <= 52 ? b + 7 : b - 5);
+function pattern(style, v) {
+  const N = v.notes, n = N.length, top = N[n - 1], B = v.bass, F = fifthOf(B);
+  const ev = [];
+  const hit = (at, notes, dur, vel, strum = 0.012) => ev.push({ at, notes, dur, vel, strum });
+  const bass = (at, m, dur, vel) => ev.push({ at, notes: [m], dur, vel, bass: true });
+  switch (style) {
+    case 'pad':
+      hit(0, N, 3.85, 0.13, 0.02); bass(0, B, 2, 0.2); bass(2, B, 1.9, 0.14); break;
+    case 'pulse':
+      for (let i = 0; i < 8; i++) {
+        hit(i * 0.5, N, 0.42, i % 4 === 0 ? 0.15 : i % 2 ? 0.08 : 0.11, 0.004);
+        bass(i * 0.5, i % 4 === 3 ? F : B, 0.42, i % 2 ? 0.12 : 0.18);
+      }
+      break;
+    case 'arp': {
+      const line = n >= 4 ? N.slice(0, 4) : [...N, N[0] + 12];
+      [0, 1, 2, 3, 2, 1, 2, 3].forEach((k, i) => hit(i * 0.5, [line[k]], 1.1, line[k] === top ? 0.14 : 0.1, 0));
+      bass(0, B, 3.9, 0.16); break;
+    }
+    case 'strum': {
+      const up = N.slice().reverse().slice(0, 3);
+      [[0, 'd'], [1, 'd'], [1.5, 'u'], [2.5, 'u'], [3, 'd'], [3.5, 'u']].forEach(([at, dir], i, arr) => {
+        const len = (arr[i + 1] ? arr[i + 1][0] : 4) - at;
+        if (dir === 'd') hit(at, N, len, i === 0 ? 0.15 : 0.12, 0.018);
+        else hit(at, up, len, 0.08, 0.014);
+      });
+      bass(0, B, 1.6, 0.2); bass(2, F, 1.6, 0.15); break;
+    }
+    case 'ballad':
+      bass(0, B, 2, 0.2); bass(2, F, 2, 0.14);
+      [0, 1, n - 1, 1, Math.min(2, n - 1), 1, n - 1, 1].forEach((k, i) => hit(i * 0.5, [N[k]], 1.4, N[k] === top ? 0.14 : 0.095, 0));
+      break;
+    case 'waltz':
+      bass(0, B, 1, 0.2); hit(1, N, 0.8, 0.1, 0.006); hit(2, N, 0.8, 0.085, 0.006); break;
+    case 'bossa':
+      bass(0, B, 1.4, 0.19); bass(1.5, F, 0.45, 0.13); bass(2, B, 1.4, 0.17); bass(3.5, F, 0.45, 0.13);
+      [0, 1.5, 2.5, 3.5].forEach((at, i) => hit(at, N, 0.45, i === 0 ? 0.12 : 0.1, 0.006));
+      break;
+  }
+  return ev;
+}
+// schedule one bar; returns its length in seconds
+function performBar(v, t, styleKey = S.style) {
+  const st = STYLES[styleKey], beat = 60 / S.bpm;
+  for (const e of pattern(styleKey, v)) {
+    const at = t + e.at * beat + (Math.random() - 0.5) * 0.012; // a little human looseness
+    const humanVel = 0.88 + Math.random() * 0.24;
+    e.notes.forEach((m, j) => {
+      const isTop = !e.bass && m === v.top;
+      const strumAt = at + j * e.strum;
+      tone(m, strumAt, e.dur * beat, e.vel * humanVel * (isTop ? 1.3 : 1), e.bass ? 'bass' : st.inst);
+      if (!e.bass) schedulePing(m, strumAt);
+    });
+  }
+  return st.beats * beat;
+}
+// light up a key (and the wave) exactly when its note sounds
+function schedulePing(m, at) {
+  const ms = (at - AC.currentTime) * 1000;
+  setTimeout(() => pingNote(m), Math.max(0, ms));
 }
 function play(ch, extra) {
   resumeAudio();
-  if (AC) scheduleChord(ch, AC.currentTime + 0.01, 1.4);
-  showChord(ch, 1.4, extra);
+  const v = voiceFor(ch);
+  if (AC) {
+    const t = AC.currentTime + 0.01, inst = STYLES[S.style].inst;
+    v.notes.forEach((m, j) => tone(m, t + j * 0.018, 1.5, m === v.top ? 0.17 : 0.13, inst));
+    tone(v.bass, t, 1.5, 0.2, 'bass');
+  }
+  showChord(ch, 1.4, extra, v);
 }
 
 /* ================= sequencer ================= */
@@ -320,11 +579,11 @@ const Player = {
   tick() {
     const list = this.get();
     if (!list.length) { this.stop(); return; }
-    const bar = 240 / S.bpm;
     while (this.nextTime < AC.currentTime + 0.15) {
       const i = this.idx % list.length, ch = list[i], at = this.nextTime;
-      scheduleChord(ch, at, bar * 0.92, bar);
-      setTimeout(() => { if (S.playing) this.onStep(i, ch, bar); }, Math.max(0, (at - AC.currentTime) * 1000));
+      const v = voiceFor(ch);
+      const bar = performBar(v, at);
+      setTimeout(() => { if (S.playing) this.onStep(i, ch, bar, v); }, Math.max(0, (at - AC.currentTime) * 1000));
       this.nextTime += bar;
       this.idx++;
     }
@@ -450,8 +709,8 @@ function updateWheel() {
       s.label.style.fill = on ? f.ink : COL.cream;
       s.sub.style.fill = on ? f.ink : f.c;
     } else {
-      s.path.style.fill = on ? COL.cream : (s.ring === 'o' ? '#262117' : '#1E1A13');
-      s.label.style.fill = on ? COL.bg : 'rgba(241,237,224,.42)';
+      s.path.style.fill = on ? f.c : (s.ring === 'o' ? '#262117' : '#1E1A13');
+      s.label.style.fill = on ? f.ink : 'rgba(241,237,224,.42)';
       s.sub.style.fill = COL.bg;
     }
   }
@@ -466,7 +725,7 @@ function updateWheel() {
     d.text.style.fill = on ? fc.ink : (scale.has(d.pc) ? COL.cream : 'rgba(241,237,224,.3)');
   }
   if (S.current) {
-    cName.textContent = chordName(S.current);
+    cName.textContent = S.currentVoice ? S.currentVoice.label : chordName(S.current);
     const a = analyse(S.current);
     cSub.textContent = a.deg >= 0 ? `${a.num} · ${FN[a.fn].name.toUpperCase()}` : 'OUTSIDE KEY';
     cSub.style.fill = a.deg >= 0 ? FN[a.fn].c : COL.cream;
@@ -573,12 +832,13 @@ function tnUpdate() {
   for (const tr of tris) {
     const d = map.get(`${tr.ch.root}${tr.ch.q}`), on = tr.g.classList.contains('on');
     const f = d ? FN[d.fn] : null;
-    const fill = on ? (f || FN.X).c : d ? mixHex(f.c, DARK, 0.32) : '#2A241A';
+    const fo = on ? FN[analyse(tr.ch).fn] : null;
+    const fill = on ? fo.c : d ? mixHex(f.c, DARK, 0.32) : '#2A241A';
     tr.path.style.fill = fill; tr.path.style.stroke = fill;
     tr.label.textContent = chordName(tr.ch);
-    tr.label.style.fill = on ? (f || FN.X).ink : d ? COL.cream : 'rgba(241,237,224,.34)';
+    tr.label.style.fill = on ? fo.ink : d ? COL.cream : 'rgba(241,237,224,.34)';
     tr.sub.textContent = d ? d.num : '';
-    tr.sub.style.fill = on ? (f || FN.X).ink : d ? f.c : 'transparent';
+    tr.sub.style.fill = on ? fo.ink : d ? f.c : 'transparent';
   }
   const scale = new Set(diatonic().map(d => d.root)), tonic = diatonic()[0].root;
   for (const n of tnodes) {
@@ -829,8 +1089,9 @@ function ckSetShape(pcs, f, name, note) {
   ckUpdate();
 }
 const ckSegs = pc => cksegs.find(s => s.pc === pc);
-function ckShowChord(ch, f) {
-  ckSetShape(chordPcs(ch), f, chordName(ch), null);
+function ckShowChord(ch, f, v) {
+  const pcs = v ? [ch.root, ...v.pcs.filter(p => p !== ch.root)] : chordPcs(ch);
+  ckSetShape(pcs.slice().sort((x, y) => mod(x - ch.root, 12) - mod(y - ch.root, 12)), f, v ? v.label : chordName(ch), null);
 }
 function ckFrame(dt) {
   if (S.view !== 'clock' || !CKS.tgt.length) return;
@@ -946,22 +1207,29 @@ function updatePianoScale() {
   }
 }
 let pianoTimer = null;
-function pressKeys(ch, f, dur) {
+function pressKeys(v, f, dur) {
   clearTimeout(pianoTimer);
   piano.style.setProperty('--c', f.c);
   piano.style.setProperty('--ink', f.ink);
-  const v = voicing(ch);
-  for (const m in keyEls) keyEls[m].classList.remove('down', 'bass');
+  for (const m in keyEls) keyEls[m].classList.remove('down', 'bass', 'top');
   v.notes.forEach(m => keyEls[m] && keyEls[m].classList.add('down'));
-  const bk = keyEls[v.bass + 12];
+  if (keyEls[v.top]) keyEls[v.top].classList.add('top');
+  const bk = keyEls[v.bass + 12] || keyEls[v.bass + 24];
   if (bk) bk.classList.add('bass');
   pianoTimer = setTimeout(() => {
     for (const m in keyEls) keyEls[m].classList.remove('down');
   }, dur * 1000);
 }
+// a note just sounded inside a pattern: flash its key and kick its wave
+function pingNote(m) {
+  const k = keyEls[m];
+  if (k) retrigger(k, 'ping');
+  const v = S.voices.find(x => x.midi === m && x.tgt > 0);
+  if (v) v.amp = 1;
+}
 function tapKey(m) {
   resumeAudio();
-  if (AC) tone(m, AC.currentTime + 0.005, 0.5, 0.18, false);
+  if (AC) tone(m, AC.currentTime + 0.005, 0.6, 0.18, 'keys');
   const k = keyEls[m];
   retrigger(k, 'tap');
   setTimeout(() => k.classList.remove('tap'), 260);
@@ -1006,7 +1274,7 @@ function vizSVG(a) {
   }
   return `<svg class="viz" viewBox="-50 -50 100 100" aria-hidden="true">${body}</svg>`;
 }
-function bubble(ch, tag = 'button') {
+function bubble(ch, opts = {}, tag = 'button') {
   const a = analyse(ch), f = FN[a.fn];
   const b = document.createElement(tag);
   b.className = 'bub';
@@ -1015,7 +1283,10 @@ function bubble(ch, tag = 'button') {
   b.style.setProperty('--ink', f.ink);
   const rr = () => 40 + Math.round(Math.random() * 18);
   b.style.setProperty('--br', `${rr()}% ${rr()}% ${rr()}% ${rr()}% / ${rr()}% ${rr()}% ${rr()}% ${rr()}%`);
-  b.innerHTML = `${vizSVG(a)}<span class="num">${a.num || '✦'}</span><span class="nm">${chordName(ch)}</span>`;
+  const label = opts.coloured ? resolve(ch).label : chordName(ch);
+  if (label.length > 5) b.classList.add('long');
+  if (a.spice) b.classList.add('spicy');
+  b.innerHTML = `${vizSVG(a)}<span class="num">${a.num || '✦'}</span><span class="nm">${label}</span>`;
   return b;
 }
 
@@ -1029,9 +1300,11 @@ function setLive(els, dur) {
 }
 
 /* ================= show a chord ================= */
-function showChord(ch, dur, extra = []) {
+function showChord(ch, dur, extra = [], voice) {
   const prev = S.current;
+  const v = voice || voiceFor(ch);
   S.current = { root: ch.root, q: ch.q };
+  S.currentVoice = v;
   const a = analyse(ch), f = FN[a.fn];
   updateWheel();
 
@@ -1049,7 +1322,7 @@ function showChord(ch, dur, extra = []) {
   const m = retarget(S.blobA, chordPcs(ch).map(pc => outerIdx(pc) * 30).sort((x, y) => x - y));
   S.blobA = m.start; S.blobT = m.tgt; S.blobRested = false;
   tnShowChord(ch, f);
-  ckShowChord(ch, f);
+  ckShowChord(ch, f, v);
   blob.style.fill = hexA(f.c, 0.2);
   blob.style.stroke = f.c;
   S.liveUntil = performance.now() + dur * 1000;
@@ -1057,10 +1330,12 @@ function showChord(ch, dur, extra = []) {
   // wave voices
   const now = performance.now();
   S.voices.forEach(v => { v.tgt = 0; v.releaseAt = 0; });
-  voicing(ch).notes.forEach((m, j) => S.voices.push({ f: mtof(m), amp: 0, tgt: 1, releaseAt: now + dur * 1000, col: j === 0 ? f.c : COL.cream }));
+  // sustained styles hold the wave up; rhythmic ones let it dip and spike on every hit
+  const hold = STYLES[S.style].inst === 'pad' ? 1 : 0.45;
+  v.notes.forEach((m, j) => S.voices.push({ f: mtof(m), midi: m, amp: 0, tgt: hold, releaseAt: now + dur * 1000, col: m === v.top ? f.c : COL.cream }));
   S.waveColor = f.c;
 
-  pressKeys(ch, f, dur);
+  pressKeys(v, f, dur);
 
   const glow = $('#glow');
   glow.style.color = f.c;
@@ -1085,13 +1360,17 @@ function updateInfo() {
     pcs = diatonic().map(d => d.root); rootPc = I.root;
   } else {
     const a = analyse(ch);
-    f = FN[a.fn]; badge = a.num || '✦'; title = chordFull(ch); tag = a.deg >= 0 ? f.name : 'Outside the key';
-    text = a.deg >= 0 ? sys.degs[a.deg].text : SPECIAL_TEXT[ch.q] || `Not in ${keyName()}. A borrowed or chromatic chord — use it for colour and surprise.`;
+    const v = S.currentVoice;
+    f = FN[a.fn]; badge = a.num || '✦';
+    title = v && v.label !== chordName(ch) ? v.label : chordFull(ch);
+    tag = a.deg >= 0 ? f.name : a.spice ? `Spice · ${f.name}` : 'Outside the key';
+    text = a.deg >= 0 ? sys.degs[a.deg].text : a.spice ? a.text : SPECIAL_TEXT[ch.q] || `Not in ${keyName()}. A borrowed or chromatic chord — use it for colour and surprise.`;
     if (!sameChord(ch, I)) {
       const n = chordPcs(ch).filter(p => chordPcs(I).includes(p)).length;
       text += n ? ` Shares ${n} note${n > 1 ? 's' : ''} with ${chordName(I)}.` : ` Shares no notes with ${chordName(I)} — a bold move.`;
     }
-    pcs = chordPcs(ch); rootPc = ch.root;
+    if (v && v.rc.ext) text += ` Coloured as ${v.label}: ${EXTS[v.rc.ext].feel}.`;
+    pcs = v ? [ch.root, ...v.pcs.filter(p => p !== ch.root)] : chordPcs(ch); rootPc = ch.root;
   }
   const box = $('#info');
   box.style.setProperty('--c', f.c);
@@ -1118,7 +1397,7 @@ function buildChordRow(container, onTap) {
 }
 
 /* ================= progressions ================= */
-const progChords = () => SYS().progs[S.prog].degs.map(i => keyChords()[i]);
+const progChords = () => SYS().progs[S.prog].degs.map(d => typeof d === 'number' ? keyChords()[d] : spiceById(d));
 function renderChips() {
   const box = $('#progChips');
   box.innerHTML = '';
@@ -1141,8 +1420,9 @@ function renderSteps(animate) {
   box.innerHTML = '';
   const list = progChords();
   box.style.setProperty('--n', list.length);
+  box.classList.toggle('dense', list.length > 5);
   list.forEach((ch, i) => {
-    const t = bubble(ch);
+    const t = bubble(ch, { coloured: true });
     if (animate) { t.classList.add('enter'); t.style.setProperty('--ed', `${i * 55}ms`); }
     t.addEventListener('click', () => { if (!S.playing) play(ch, [t]); });
     box.appendChild(t);
@@ -1150,7 +1430,7 @@ function renderSteps(animate) {
   $('#progDesc').textContent = SYS().progs[S.prog].text;
 }
 function startProgress() {
-  Player.start('progress', progChords, (i, ch, bar) => showChord(ch, bar * 0.92, [$('#progSteps').children[i]]));
+  Player.start('progress', progChords, (i, ch, bar, v) => showChord(ch, bar * 0.92, [$('#progSteps').children[i]], v));
 }
 
 /* ================= compose ================= */
@@ -1158,10 +1438,13 @@ function renderSeq(enterIdx = -1) {
   const box = $('#seq');
   box.innerHTML = '';
   S.seq.forEach((ch, i) => {
-    const t = bubble(ch);
+    const t = bubble(ch, { coloured: true });
     if (i === enterIdx) t.classList.add('enter');
     if (i === S.sel) t.classList.add('sel');
+    if (ch.ext && ch.ext !== 'auto' || ch.inv) t.classList.add('flavoured');
+    onHold(t, () => openFlavour(i));
     t.addEventListener('click', () => {
+      if (t._held) { t._held = false; return; }
       if (S.sel === i) {
         S.seq.splice(i, 1); S.sel = -1; buzz(15);
         renderSeq(); save(); updateSuggest();
@@ -1195,26 +1478,35 @@ function addToSeq(ch) {
 function updateSuggest() {
   const last = S.seq[S.seq.length - 1];
   const dia = keyChords(), sys = SYS();
-  let sugg;
+  let sugg, spice = [];
   if (!last) {
     sugg = [0];
   } else {
     const a = analyse(last);
-    sugg = a.deg >= 0 ? sys.next[a.deg] : [0, S.minor ? 7 : 4]; // home, or the strong dominant
+    if (a.deg >= 0) {
+      sugg = sys.next[a.deg];
+      spice = sys.spice.filter(sp => sp.after.includes(a.deg)).slice(0, 2).map(sp => spiceById(sp.id));
+    } else if (a.spice) {
+      const sp = sys.spice.find(x => x.id === a.spice);
+      sugg = sp.next.filter(x => typeof x === 'number');
+      spice = sp.next.filter(x => typeof x === 'string').map(spiceById);
+    } else {
+      sugg = [0, S.minor ? 7 : 4]; // home, or the strong dominant
+    }
   }
   const box = $('#suggest');
   box.innerHTML = '';
-  sugg.forEach((i, n) => {
-    const ch = dia[i], f = FN[ch.fn];
+  [...sugg.map(i => dia[i]), ...spice].forEach((ch, n) => {
+    const f = FN[ch.fn];
     const [mood, feel] = last ? moodOf(last, ch) : sys.start;
     const card = document.createElement('button');
-    card.className = 'moodcard';
+    card.className = 'moodcard' + (ch.spice ? ' spice' : '');
     card.style.setProperty('--c', f.c);
     card.style.setProperty('--d', `${(-Math.random() * 9).toFixed(2)}s`);
     card.style.animationDelay = `${n * 50}ms, var(--d)`;
-    card.innerHTML = `<span class="mc-top"><b>${chordName(ch)}</b><em>${ch.num}</em></span>` +
+    card.innerHTML = `<span class="mc-top"><b>${chordName(ch)}</b><em>${ch.num}</em>${ch.spice ? '<i>✦ spice</i>' : ''}</span>` +
       `<span class="mc-mood">${mood}</span><span class="mc-feel">${feel}</span>`;
-    card.addEventListener('click', () => addToSeq(ch));
+    card.addEventListener('click', () => addToSeq({ root: ch.root, q: ch.q }));
     box.appendChild(card);
   });
   box.scrollLeft = 0;
@@ -1236,13 +1528,118 @@ function setMoodNow(from, to) {
   retrigger(el, 'swap');
 }
 function startCompose() {
-  Player.start('compose', () => S.seq, (i, ch, bar) => {
+  Player.start('compose', () => S.seq, (i, ch, bar, v) => {
     const tile = $('#seq').children[i];
-    showChord(ch, bar * 0.92, [tile]);
+    showChord(ch, bar * 0.92, [tile], v);
     if (S.seq.length > 1) setMoodNow(S.seq[mod(i - 1, S.seq.length)], ch);
     if (tile) tile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   });
 }
+
+/* ================= sound: style + colour ================= */
+function buildSoundbars() {
+  $$('.soundbar').forEach(bar => {
+    const chips = bar.querySelector('.stylechips');
+    chips.innerHTML = '';
+    for (const key in STYLES) {
+      const b = document.createElement('button');
+      b.dataset.style = key;
+      b.textContent = STYLES[key].name;
+      b.addEventListener('click', () => setStyle(key));
+      chips.appendChild(b);
+    }
+    bar.querySelectorAll('[data-colour]').forEach(b => b.addEventListener('click', () => setColour(+b.dataset.colour)));
+  });
+  updateSoundbars();
+}
+function updateSoundbars() {
+  $$('.stylechips button').forEach(b => b.classList.toggle('on', b.dataset.style === S.style));
+  $$('.colourpick').forEach(c => {
+    c.dataset.level = S.colour;
+    c.querySelectorAll('[data-colour]').forEach(b => b.classList.toggle('on', +b.dataset.colour === S.colour));
+  });
+}
+// hear a style straight away: one bar of the current chord (or home)
+function previewBar() {
+  if (S.playing || !AC) return;
+  const ch = S.current || diatonic()[0];
+  const v = voiceFor(ch);
+  const bar = performBar(v, AC.currentTime + 0.03);
+  showChord(ch, bar * 0.92, [], v);
+}
+function setStyle(key) {
+  resumeAudio();
+  S.style = key;
+  updateSoundbars(); save(); buzz(6);
+  previewBar();
+}
+function setColour(level) {
+  resumeAudio();
+  S.colour = level;
+  updateSoundbars(); save(); buzz(6);
+  renderSteps(false); renderSeq();
+  if (!S.playing) play(S.current || diatonic()[0]);
+}
+
+/* ================= hold a bubble: its flavour ================= */
+function onHold(el, fn) {
+  let timer = null;
+  el.addEventListener('pointerdown', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { el._held = true; buzz(20); fn(); }, 450);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => el.addEventListener(t, () => clearTimeout(timer)));
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+let flavourIdx = -1;
+function openFlavour(i) {
+  flavourIdx = i;
+  renderFlavour();
+  $('#flavour').classList.add('open');
+  $('#flavour').setAttribute('aria-hidden', 'false');
+}
+function closeFlavour() {
+  flavourIdx = -1;
+  $('#flavour').classList.remove('open');
+  $('#flavour').setAttribute('aria-hidden', 'true');
+}
+function renderFlavour() {
+  const ch = S.seq[flavourIdx];
+  if (!ch) return closeFlavour();
+  const a = analyse(ch), f = FN[a.fn];
+  const sheet = $('#flavour');
+  sheet.style.setProperty('--c', f.c);
+  $('#flTitle').textContent = `${chordName(ch)} · ${a.num || '✦'}`;
+  const cur = ch.ext || 'auto';
+  const opts = FLAVORS[ch.q] || ['auto'];
+  $('#flExt').innerHTML = opts.map(o => {
+    const probe = resolve({ ...ch, ext: o, inv: 0 });
+    const feel = o === 'auto' ? `follows Colour (${COLOURS[S.colour]})` : o === 'triad' ? 'plain and direct' : EXTS[o].feel;
+    return `<button data-ext="${o}" class="${o === cur ? 'on' : ''}"><b>${o === 'auto' ? 'Auto' : probe.label}</b><small>${feel}</small></button>`;
+  }).join('');
+  const inv = ch.inv || 0, rc = resolve(ch);
+  const bassName = k => spellIn(mod(ch.root + (k === 1 ? rc.iv[1] : k === 2 ? rc.iv[2] : 0), 12), ch);
+  $('#flBass').innerHTML = [0, 1, 2].map(k =>
+    `<button data-inv="${k}" class="${k === inv ? 'on' : ''}"><b>${bassName(k)}</b><small>${['root', '3rd · smooth', '5th · floating'][k]}</small></button>`).join('');
+  sheet.querySelectorAll('[data-ext]').forEach(b => b.addEventListener('click', () => {
+    const o = b.dataset.ext;
+    if (o === 'auto') delete ch.ext; else ch.ext = o;
+    flavourChanged();
+  }));
+  sheet.querySelectorAll('[data-inv]').forEach(b => b.addEventListener('click', () => {
+    const k = +b.dataset.inv;
+    if (k) ch.inv = k; else delete ch.inv;
+    flavourChanged();
+  }));
+}
+function flavourChanged() {
+  const ch = S.seq[flavourIdx];
+  save(); buzz(6);
+  renderSeq(); renderFlavour();
+  if (!S.playing) play(ch, [$('#seq').children[flavourIdx]]);
+}
+$('#flClose').addEventListener('click', closeFlavour);
+$('#flavour').addEventListener('click', e => { if (e.target.id === 'flavour') closeFlavour(); });
 
 /* ================= transport ================= */
 const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
@@ -1455,6 +1852,7 @@ function setMode(m) {
   $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === m));
   $('#ind').style.transform = `translateX(${idx * 100}%)`;
   if (m === 'progress') renderSteps(true);
+  closeFlavour();
   buzz(6);
 }
 $$('.tab').forEach(t => t.addEventListener('click', () => setMode(t.dataset.tab)));
@@ -1633,6 +2031,7 @@ tnInit();
 setView(S.view, true);
 updateModeSwitch();
 buildPiano();
+buildSoundbars();
 renderChips();
 onKeyChange();
 updatePlayButtons();

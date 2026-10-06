@@ -87,6 +87,13 @@
       <div class="floaty steps" id="progSteps"></div>
       <canvas class="wv"></canvas>
       <p class="desc" id="progDesc"></p>
+      <div class="soundbar">
+        <div class="stylechips" role="group" aria-label="Playing style"></div>
+        <div class="colourpick" role="group" aria-label="Chord colour">
+          <span class="cpl">Colour</span>
+          <button data-colour="0">Plain</button><button data-colour="1">Rich</button><button data-colour="2">Lush</button>
+        </div>
+      </div>
       <div class="transport">
         <button class="play" data-play="progress"></button>
         <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
@@ -101,6 +108,13 @@
       <p class="moodnow" id="moodNow"></p>
       <div class="moods" id="suggest" aria-label="Suggested next chords"></div>
       <div class="chords" id="coChords"></div>
+      <div class="soundbar">
+        <div class="stylechips" role="group" aria-label="Playing style"></div>
+        <div class="colourpick" role="group" aria-label="Chord colour">
+          <span class="cpl">Colour</span>
+          <button data-colour="0">Plain</button><button data-colour="1">Rich</button><button data-colour="2">Lush</button>
+        </div>
+      </div>
       <div class="transport">
         <button class="play" data-play="compose"></button>
         <button class="sq" id="undo" aria-label="Undo last chord">
@@ -111,9 +125,19 @@
         </button>
         <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
       </div>
-      <p class="hint">Tap the wheel or a chord to add it · Tap a bubble twice to remove</p>
+      <p class="hint">Tap the wheel or a chord to add it · Hold a bubble to change its flavour · Tap twice to remove</p>
     </div>
   </main>
+
+  <div class="sheet" id="flavour" aria-hidden="true">
+    <div class="sheet-card" role="dialog" aria-labelledby="flTitle">
+      <div class="sheet-head"><h3 id="flTitle">Flavour</h3><button id="flClose" aria-label="Close">✕</button></div>
+      <div class="sheet-label">Colour</div>
+      <div class="flopts" id="flExt"></div>
+      <div class="sheet-label">Bass note</div>
+      <div class="flopts three" id="flBass"></div>
+    </div>
+  </div>
 
   <nav class="tabs">
     <div class="ind" id="ind"></div>
