@@ -1534,7 +1534,11 @@ function startCompose() {
     const tile = $('#seq').children[i];
     showChord(ch, bar * 0.92, [tile], v);
     if (S.seq.length > 1) setMoodNow(S.seq[mod(i - 1, S.seq.length)], ch);
-    if (tile) tile.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    // keep the playing chord centred in its row — sideways only, so the panel never jumps
+    if (tile && !drag.el) {
+      const box = $('#seq');
+      box.scrollTo({ left: tile.offsetLeft - (box.clientWidth - tile.offsetWidth) / 2, behavior: 'smooth' });
+    }
   });
 }
 
