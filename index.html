@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#15120C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Circle5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="pond" aria-hidden="true">
+  <div class="drift d1"></div>
+  <div class="drift d2"></div>
+  <div class="glow" id="glow"></div>
+</div>
+
+<div class="app" data-mode="explore">
+  <header class="top">
+    <div class="modesw" role="group" aria-label="Major or minor key">
+      <div class="mind"></div>
+      <button data-minor="0" class="on">Major</button>
+      <button data-minor="1">Minor</button>
+    </div>
+    <div class="keypick">
+      <button class="iconbtn" id="keyPrev" aria-label="Previous key (one fifth down)">‹</button>
+      <div class="keyname"><small>KEY</small><span id="keyName">C major</span></div>
+      <button class="iconbtn" id="keyNext" aria-label="Next key (one fifth up)">›</button>
+    </div>
+  </header>
+
+  <section class="stage" data-view="circle">
+    <div class="viewpick">
+      <button class="vbtn" id="viewBtn" aria-haspopup="listbox" aria-expanded="false"></button>
+      <div class="vmenu" role="listbox" aria-label="Choose a view">
+        <button role="option" data-view="circle">
+          <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></i>
+          <span><b>Circle of fifths</b><small>Keys, and the chord families inside them</small></span>
+        </button>
+        <button role="option" data-view="tonnetz">
+          <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 18h20M6 11h12M7 18l5-14 5 14M2 18l4-7 4 7M14 18l4-7 4 7"/></svg></i>
+          <span><b>Tonnetz</b><small>Chords as triangles — progressions become paths</small></span>
+        </button>
+        <button role="option" data-view="clock">
+          <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 5.5 17.6 15.2H6.4z"/></svg></i>
+          <span><b>Chromatic clock</b><small>Intervals and symmetry, in semitone order</small></span>
+        </button>
+      </div>
+    </div>
+    <svg id="wheel" viewBox="-206 -206 412 412" aria-label="Music theory visual"></svg>
+    <div class="shapes" id="shapes" aria-label="Symmetric shapes">
+      <button data-shape="aug"><span>▲</span>Aug</button>
+      <button data-shape="dim7"><span>◆</span>Dim7</button>
+      <button data-shape="whole"><span>⬢</span>Whole-tone</button>
+      <button data-shape="scale"><span>✿</span>Scale</button>
+    </div>
+  </section>
+
+  <section class="piano" id="piano" aria-label="Piano keyboard"></section>
+
+  <main class="panels">
+    <!-- EXPLORE -->
+    <div class="panel on" data-mode="explore">
+      <div class="floaty chords" id="exChords"></div>
+      <canvas class="wv"></canvas>
+      <div class="card" id="info">
+        <div class="card-top">
+          <span class="badge" id="iBadge">C</span>
+          <div>
+            <h2 id="iTitle">C major</h2>
+            <div class="tag" id="iTag">Home key</div>
+          </div>
+        </div>
+        <p id="iText"></p>
+        <div class="notes" id="iNotes"></div>
+      </div>
+      <p class="hint" id="exHint">Drag the wheel to change key · Hold a chord to make it the home key</p>
+    </div>
+
+    <!-- PROGRESSIONS -->
+    <div class="panel" data-mode="progress">
+      <div class="chips" id="progChips"></div>
+      <div class="floaty steps" id="progSteps"></div>
+      <canvas class="wv"></canvas>
+      <p class="desc" id="progDesc"></p>
+      <div class="transport">
+        <button class="play" data-play="progress"></button>
+        <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
+      </div>
+    </div>
+
+    <!-- COMPOSE -->
+    <div class="panel" data-mode="compose">
+      <div class="row-label"><span>YOUR PROGRESSION</span><span id="seqCount">0 / 16</span></div>
+      <div class="floaty seq" id="seq"></div>
+      <canvas class="wv"></canvas>
+      <p class="moodnow" id="moodNow"></p>
+      <div class="moods" id="suggest" aria-label="Suggested next chords"></div>
+      <div class="chords" id="coChords"></div>
+      <div class="transport">
+        <button class="play" data-play="compose"></button>
+        <button class="sq" id="undo" aria-label="Undo last chord">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        </button>
+        <button class="sq" id="clear" aria-label="Clear progression">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
+      </div>
+      <p class="hint">Tap the wheel or a chord to add it · Tap a bubble twice to remove</p>
+    </div>
+  </main>
+
+  <nav class="tabs">
+    <div class="ind" id="ind"></div>
+    <button class="tab on" data-tab="explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 9c-2-3-2-5 0-7 2 2 2 4 0 7zM12 15c2 3 2 5 0 7-2-2-2-4 0-7zM9 12c-3 2-5 2-7 0 2-2 4-2 7 0zM15 12c3-2 5-2 7 0-2 2-4 2-7 0z"/></svg>
+      Explore
+    </button>
+    <button class="tab" data-tab="progress">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="7" r="2.5"/><circle cx="19" cy="12" r="2.5"/><path d="M7 10.5 9.8 8.3M14.2 8.3 17 10.5"/></svg>
+      Progressions
+    </button>
+    <button class="tab" data-tab="compose">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+      Compose
+    </button>
+  </nav>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
