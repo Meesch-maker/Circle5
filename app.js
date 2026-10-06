@@ -539,7 +539,7 @@ function performBar(v, t, styleKey = S.style) {
     const humanVel = 0.88 + Math.random() * 0.24;
     e.notes.forEach((m, j) => {
       const isTop = !e.bass && m === v.top;
-      const strumAt = at + j * e.strum;
+      const strumAt = at + j * (e.strum || 0);
       tone(m, strumAt, e.dur * beat, e.vel * humanVel * (isTop ? 1.3 : 1), e.bass ? 'bass' : st.inst);
       if (!e.bass) schedulePing(m, strumAt);
     });
@@ -572,9 +572,9 @@ const Player = {
     if (!get().length) return;
     Object.assign(this, { mode, get, onStep, idx: 0, nextTime: AC.currentTime + 0.08 });
     S.playing = true;
+    updatePlayButtons();
     this.timer = setInterval(() => this.tick(), 25);
     this.tick();
-    updatePlayButtons();
   },
   tick() {
     const list = this.get();
@@ -582,7 +582,8 @@ const Player = {
     while (this.nextTime < AC.currentTime + 0.15) {
       const i = this.idx % list.length, ch = list[i], at = this.nextTime;
       const v = voiceFor(ch);
-      const bar = performBar(v, at);
+      let bar = STYLES[S.style].beats * 60 / S.bpm;
+      try { bar = performBar(v, at); } catch (err) { console.error('Could not schedule bar', err); }
       setTimeout(() => { if (S.playing) this.onStep(i, ch, bar, v); }, Math.max(0, (at - AC.currentTime) * 1000));
       this.nextTime += bar;
       this.idx++;
@@ -1442,7 +1443,8 @@ function renderSeq(enterIdx = -1) {
     if (i === enterIdx) t.classList.add('enter');
     if (i === S.sel) t.classList.add('sel');
     if (ch.ext && ch.ext !== 'auto' || ch.inv) t.classList.add('flavoured');
-    onHold(t, () => openFlavour(i));
+    t.addEventListener('pointerdown', e => seqPointerDown(e, t, i));
+    t.addEventListener('contextmenu', e => e.preventDefault());
     t.addEventListener('click', () => {
       if (t._held) { t._held = false; return; }
       if (S.sel === i) {
@@ -1582,15 +1584,95 @@ function setColour(level) {
 }
 
 /* ================= hold a bubble: its flavour ================= */
-function onHold(el, fn) {
-  let timer = null;
-  el.addEventListener('pointerdown', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => { el._held = true; buzz(20); fn(); }, 450);
-  });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => el.addEventListener(t, () => clearTimeout(timer)));
-  el.addEventListener('contextmenu', e => e.preventDefault());
+// Hold a bubble to pick it up. Drag to move it; let go without moving to open its flavour.
+// A quick swipe before the hold completes still scrolls the row.
+const drag = { pending: null, timer: 0, el: null, idx: -1, target: -1, startX: 0, clientX: 0, moved: false, slots: [], items: [], step: 60, raf: 0 };
+const seqContentX = clientX => { const box = $('#seq'), r = box.getBoundingClientRect(); return clientX - r.left + box.scrollLeft; };
+function seqPointerDown(e, el, i) {
+  if (e.button > 0 || drag.el) return;
+  clearTimeout(drag.timer);
+  drag.pending = { el, i, x: e.clientX, y: e.clientY, id: e.pointerId };
+  drag.timer = setTimeout(liftBubble, 380);
 }
+function liftBubble() {
+  const p = drag.pending;
+  if (!p) return;
+  drag.pending = null;
+  const box = $('#seq');
+  const items = [...box.querySelectorAll('.bub')];
+  Object.assign(drag, {
+    el: p.el, idx: p.i, target: p.i, moved: false, items,
+    startX: seqContentX(p.x), clientX: p.x,
+    slots: items.map(b => b.offsetLeft + b.offsetWidth / 2),
+    step: items.length > 1 ? items[1].offsetLeft - items[0].offsetLeft : p.el.offsetWidth + 6,
+  });
+  try { p.el.setPointerCapture(p.id); } catch (err) { /* pointer already gone */ }
+  p.el._held = true;
+  p.el.classList.add('lifted');
+  box.classList.add('dragging');
+  buzz(20);
+  drag.raf = requestAnimationFrame(dragLoop);
+}
+function dragUpdate() {
+  const dx = seqContentX(drag.clientX) - drag.startX;
+  if (Math.abs(dx) > 6) drag.moved = true;
+  drag.el.style.setProperty('--dx', `${dx}px`);
+  // which slot is the lifted bubble's centre over?
+  const c = drag.slots[drag.idx] + dx;
+  let target = 0, bd = Infinity;
+  drag.slots.forEach((x, j) => { const d = Math.abs(x - c); if (d < bd) { bd = d; target = j; } });
+  if (target !== drag.target) { drag.target = target; buzz(4); }
+  // everyone between the old and new place slides over to make room
+  drag.items.forEach((b, j) => {
+    if (j === drag.idx) return;
+    let shift = 0;
+    if (drag.idx < target && j > drag.idx && j <= target) shift = -drag.step;
+    if (drag.idx > target && j < drag.idx && j >= target) shift = drag.step;
+    b.style.setProperty('--dx', `${shift}px`);
+  });
+}
+function dragLoop() {
+  if (!drag.el) return;
+  const box = $('#seq'), r = box.getBoundingClientRect();
+  // scroll the row when dragging near its edges
+  if (drag.clientX < r.left + 44) box.scrollLeft -= 7;
+  else if (drag.clientX > r.right - 44) box.scrollLeft += 7;
+  dragUpdate();
+  drag.raf = requestAnimationFrame(dragLoop);
+}
+function dragEnd(cancelled) {
+  clearTimeout(drag.timer);
+  drag.pending = null;
+  if (!drag.el) return;
+  cancelAnimationFrame(drag.raf);
+  const { idx, target, moved } = drag;
+  drag.el.classList.remove('lifted');
+  $('#seq').classList.remove('dragging');
+  drag.items.forEach(b => b.style.removeProperty('--dx'));
+  drag.el = null;
+  if (cancelled) return;
+  if (moved && target !== idx) {
+    const [c] = S.seq.splice(idx, 1);
+    S.seq.splice(target, 0, c);
+    S.sel = -1;
+    renderSeq(); save(); updateSuggest();
+    const placed = $('#seq').children[target];
+    if (placed) retrigger(placed, 'enter');
+    buzz(12);
+  } else if (!moved) {
+    openFlavour(idx);
+  }
+}
+window.addEventListener('pointermove', e => {
+  if (drag.pending && Math.hypot(e.clientX - drag.pending.x, e.clientY - drag.pending.y) > 10) {
+    clearTimeout(drag.timer); drag.pending = null; // that was a swipe: let the row scroll
+  }
+  if (drag.el) { drag.clientX = e.clientX; dragUpdate(); }
+});
+window.addEventListener('pointerup', () => dragEnd(false));
+window.addEventListener('pointercancel', () => dragEnd(!drag.el || !drag.moved));
+// once a bubble is picked up, the finger moves it instead of scrolling the page
+$('#seq').addEventListener('touchmove', e => { if (drag.el) e.preventDefault(); }, { passive: false });
 let flavourIdx = -1;
 function openFlavour(i) {
   flavourIdx = i;
