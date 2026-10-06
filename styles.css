@@ -37,21 +37,22 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 /* ---------- the pond: slow drifting light ---------- */
 .pond { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-.drift, .glow { position: absolute; border-radius: 50%; filter: blur(80px); }
-.drift.d1 { width: 70vmax; height: 60vmax; left: -25vmax; top: -10vmax; background: var(--mint); opacity: .08; animation: drift1 26s ease-in-out infinite alternate; }
-.drift.d2 { width: 60vmax; height: 70vmax; right: -30vmax; bottom: -25vmax; background: var(--moss); opacity: .12; animation: drift2 32s ease-in-out infinite alternate; }
-@keyframes drift1 { to { transform: translate(18vmax, 14vmax) scale(1.15); border-radius: 40% 60% 55% 45%; } }
-@keyframes drift2 { to { transform: translate(-16vmax, -20vmax) scale(.9); border-radius: 60% 40% 45% 55%; } }
+.drift, .glow { position: absolute; border-radius: 50%; will-change: transform, opacity; }
+.drift.d1 { width: 70vmax; height: 60vmax; left: -25vmax; top: -10vmax; background: radial-gradient(closest-side, var(--mint), transparent); opacity: .14; animation: drift1 26s ease-in-out infinite alternate; }
+.drift.d2 { width: 60vmax; height: 70vmax; right: -30vmax; bottom: -25vmax; background: radial-gradient(closest-side, var(--moss), transparent); opacity: .2; animation: drift2 32s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(18vmax, 14vmax) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(-16vmax, -20vmax) scale(.9); } }
 .glow {
   left: 50%; top: 28dvh;
   width: min(110vw, 520px); aspect-ratio: 1;
   transform: translate(-50%, -50%);
-  background: var(--mint);
-  opacity: .1;
-  transition: background-color .9s var(--ease);
+  color: var(--mint);
+  background: radial-gradient(closest-side, currentColor, transparent);
+  opacity: .16;
+  transition: color .9s var(--ease);
 }
 .glow.hit { animation: glowhit 1.4s var(--ease); }
-@keyframes glowhit { 0% { opacity: .32; transform: translate(-50%, -50%) scale(.85); } 100% { opacity: .1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes glowhit { 0% { opacity: .4; transform: translate(-50%, -50%) scale(.85); } 100% { opacity: .16; transform: translate(-50%, -50%) scale(1); } }
 
 .app {
   position: relative;
@@ -77,10 +78,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .modesw {
   position: relative;
   display: grid; grid-template-columns: 1fr 1fr;
-  background: color-mix(in srgb, var(--s1) 85%, transparent);
+  background: var(--s1);
   border-radius: 30px 24px 28px 26px;
   padding: 4px;
-  backdrop-filter: blur(8px);
 }
 .modesw button {
   position: relative; z-index: 1;
@@ -98,12 +98,11 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   background: var(--mint);
   box-shadow: 0 6px 18px -8px var(--mint);
   transition: transform .6s var(--spring), background .5s;
-  animation: pebble 8s ease-in-out infinite alternate;
 }
 .modesw.minor .mind { transform: translateX(100%); background: var(--rasp); box-shadow: 0 6px 18px -8px var(--rasp); }
 .modesw.minor button.on { color: #fff; }
 
-.keypick { display: flex; align-items: center; background: color-mix(in srgb, var(--s1) 85%, transparent); border-radius: 30px 26px 28px 24px; padding: 4px; backdrop-filter: blur(8px); }
+.keypick { display: flex; align-items: center; background: var(--s1); border-radius: 30px 26px 28px 24px; padding: 4px; }
 .iconbtn {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -117,7 +116,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .keyname small { display: block; font-size: 9px; letter-spacing: .2em; color: var(--mut); font-weight: 800; }
 .keyname span { display: inline-block; font-weight: 800; font-size: 16px; }
 .keyname span.flip { animation: flip .55s var(--spring); }
-@keyframes flip { 0% { transform: translateY(10px) scale(.6); opacity: 0; filter: blur(4px); } 100% { transform: none; opacity: 1; filter: none; } }
+@keyframes flip { 0% { transform: translateY(10px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
 
 /* ---------- wheel ---------- */
 .stage { position: relative; display: flex; flex-direction: column; align-items: center; padding: 4px 16px 0; flex: 0 0 auto; }
@@ -132,11 +131,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   height: 44px; padding: 0 10px 0 12px;
   display: flex; align-items: center; gap: 4px;
   border-radius: var(--pebble);
-  background: color-mix(in srgb, var(--s2) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--s2);
   box-shadow: inset 0 0 0 1.5px rgba(241, 237, 224, .1), 0 8px 20px -10px #000;
   color: var(--tx);
-  animation: pebble 9s ease-in-out infinite alternate;
   transition: transform .4s var(--spring), background .2s;
 }
 .vbtn:active { transform: scale(.88); }
@@ -148,8 +145,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   width: min(290px, calc(100vw - 32px));
   padding: 6px;
   border-radius: 28px 24px 30px 22px;
-  background: color-mix(in srgb, var(--s1) 94%, transparent);
-  backdrop-filter: blur(16px);
+  background: var(--s1);
   box-shadow: 0 24px 50px -16px #000, inset 0 0 0 1.5px rgba(241, 237, 224, .08);
   transform-origin: 22px -10px;
   transform: scale(.55) translateY(-10px);
@@ -239,6 +235,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   transition: width .7s var(--spring);
 }
 #wheel:active { cursor: grabbing; }
+.stage[data-view="tonnetz"] #wheel {
+  -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+}
 .app:not([data-mode="explore"]) #wheel { width: min(100%, 33dvh, 370px); }
 .seg { transform-box: fill-box; transform-origin: center; cursor: pointer; }
 .seg path { transition: fill .5s var(--ease); }
@@ -324,20 +324,14 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   --amp: 0;
   position: relative;
   overflow: hidden;
-  border-radius: var(--pebble);
+  border-radius: var(--br, var(--pebble));
+  will-change: transform, translate;
   background: radial-gradient(120% 80% at 50% 28%, color-mix(in srgb, var(--c) 22%, var(--s1)), var(--s1) 78%);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 28%, transparent);
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
   padding-bottom: 9px;
   gap: 0;
-  animation: pebble 11s ease-in-out infinite alternate;
-  animation-delay: var(--d, 0s);
   transition: --amp .9s ease, transform .45s var(--spring), box-shadow .4s, background .4s;
-}
-@keyframes pebble {
-  0%   { border-radius: 46% 54% 48% 52% / 40% 42% 58% 60%; }
-  50%  { border-radius: 56% 44% 54% 46% / 48% 56% 44% 52%; }
-  100% { border-radius: 44% 56% 42% 58% / 56% 46% 54% 44%; }
 }
 .bub:active { transform: scale(.88); }
 .bub .num { position: relative; font-size: 11px; font-weight: 900; color: var(--c); text-shadow: 0 1px 6px var(--bg); }
@@ -428,11 +422,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .chords { display: grid; grid-template-columns: repeat(var(--n, 7), 1fr); gap: 5px; }
 .chords .bub { height: 76px; }
 .card {
-  background: color-mix(in srgb, var(--s1) 88%, transparent);
+  background: var(--s1);
   border-radius: 30px 26px 32px 24px;
   padding: 14px 16px;
   margin: 8px 0 10px;
-  backdrop-filter: blur(10px);
 }
 .card-top { display: flex; gap: 12px; align-items: center; }
 .badge {
@@ -442,7 +435,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-weight: 900; font-size: 17px;
   background: var(--c, var(--mint)); color: var(--ink, var(--bg));
   transition: background .4s, color .4s;
-  animation: pebble 9s ease-in-out infinite alternate;
 }
 .card h2 { font-size: 21px; font-weight: 900; letter-spacing: -.01em; }
 .tag { font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--c, var(--mint)); margin-top: 1px; }
@@ -469,7 +461,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .chip.on { background: var(--tx); color: var(--bg); }
 .steps { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 6px; }
 .steps .bub { height: 74px; }
-.steps .bub.enter { animation: enter .6s var(--spring) backwards, pebble 11s ease-in-out infinite alternate; animation-delay: var(--ed, 0s), var(--d, 0s); }
+.steps .bub.enter { animation: enter .6s var(--spring) backwards; animation-delay: var(--ed, 0s); }
 @keyframes enter { from { transform: scale(.2) translateY(24px); opacity: 0; } }
 
 /* ---------- compose ---------- */
@@ -477,7 +469,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .seq { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 6px 16px 4px; scrollbar-width: none; min-height: 80px; }
 .seq::-webkit-scrollbar { display: none; }
 .seq .bub { flex: 0 0 54px; height: 70px; }
-.seq .bub.enter { animation: enter .6s var(--spring), pebble 11s ease-in-out infinite alternate; }
+.seq .bub.enter { animation: enter .6s var(--spring); }
 .seq .bub.sel { box-shadow: inset 0 0 0 2px var(--tx); }
 .seq .bub.sel::after {
   content: '×';
@@ -494,7 +486,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   border: 1.5px dashed rgba(241, 237, 224, .2);
   display: grid; place-items: center;
   color: var(--mut); font-size: 22px;
-  animation: pebble 9s ease-in-out infinite alternate;
 }
 
 /* mood of the move just made */
@@ -516,13 +507,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   border-radius: 26px 20px 28px 18px;
   background: radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, var(--c) 24%, var(--s1)), var(--s1) 70%);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 34%, transparent);
-  animation: enter .55s var(--spring) backwards, cardmorph 10s ease-in-out infinite alternate;
+  animation: enter .55s var(--spring) backwards;
   transition: transform .4s var(--spring), box-shadow .3s;
-}
-@keyframes cardmorph {
-  0%   { border-radius: 26px 20px 28px 18px; }
-  50%  { border-radius: 20px 28px 20px 26px; }
-  100% { border-radius: 28px 22px 18px 26px; }
 }
 .moodcard:active { transform: scale(.93); box-shadow: inset 0 0 0 2px var(--c), 0 10px 26px -10px var(--c); }
 .mc-top { display: flex; align-items: baseline; gap: 6px; width: 100%; }
@@ -565,8 +551,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   position: relative;
   display: grid; grid-template-columns: repeat(3, 1fr);
   margin: 0 12px 10px;
-  background: color-mix(in srgb, var(--s1) 90%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--s1);
   border-radius: 34px 28px 34px 26px;
   padding: 6px; height: 70px;
   flex: 0 0 auto;
@@ -577,7 +562,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   border-radius: var(--pebble);
   background: var(--tx);
   transition: transform .6s var(--spring);
-  animation: pebble 8s ease-in-out infinite alternate;
 }
 .tab {
   position: relative; z-index: 1;

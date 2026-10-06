@@ -515,16 +515,13 @@ function act(ch, extra) {
 // Fifths run along x, major thirds up-right, minor thirds down-right.
 // Up-triangles are major triads, down-triangles are minor; neighbours share two notes.
 const TD = 84, TH = TD * Math.sqrt(3) / 2;
-const TA = 8, TB = 6; // rendered lattice: a ∈ [-TA, TA], b ∈ [-TB, TB]
+const TA = 7, TB = 5; // rendered lattice: a ∈ [-TA, TA], b ∈ [-TB, TB]
 const tpos = (a, b) => [a * TD + b * TD / 2, -b * TH];
 const tpitch = (a, b) => mod(7 * a + 4 * b, 12);
 const PER1 = { da: 4, db: -1 }, PER2 = { da: 0, db: 3 }; // lattice periods (same pitches)
 
-defs.insertAdjacentHTML('beforeend',
-  `<radialGradient id="tnFade"><stop offset=".7" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
-   <mask id="tnMask"><rect x="-206" y="-206" width="412" height="412" fill="url(#tnFade)"/></mask>`);
 const vTonnetz = mk('g', { class: 'view' }, svg);
-const tnLayer = mk('g', {}, mk('g', { mask: 'url(#tnMask)' }, vTonnetz));
+const tnLayer = mk('g', {}, vTonnetz);
 const tnTriG = mk('g', {}, tnLayer);
 const tnShape = mk('path', { class: 'tnshape', d: 'M0 0Z' }, tnLayer);
 const tnTrailG = mk('g', { class: 'trail' }, tnLayer);
@@ -661,7 +658,7 @@ function tnShowChord(ch, f) {
     if (i >= 0) { used.add(i); return prev.pts[i].slice(); }
     return q.slice();
   });
-  TN.shape = { pts: start, tgt, pcs, color: f.c, ink: f.ink, line: !(ch.q === 'maj' || ch.q === 'min') };
+  TN.shape = { pts: start, tgt, pcs, color: f.c, ink: f.ink, line: !(ch.q === 'maj' || ch.q === 'min'), rested: false };
   tnShape.classList.toggle('line', TN.shape.line);
   tnShape.style.stroke = f.c;
   tnShape.style.fill = hexA(f.c, 0.25);
@@ -722,6 +719,7 @@ function tnWrap() {
 }
 let tnLastPan = '';
 function tnFrame(dt, now) {
+  if (S.view !== 'tonnetz') return;
   if (!TN.dragging) {
     if (TN.target) {
       const k = 60, c = 2 * Math.sqrt(k) * 0.85;
@@ -742,7 +740,9 @@ function tnFrame(dt, now) {
   if (key !== tnLastPan) { tnLayer.setAttribute('transform', `translate(${(-TN.pan[0]).toFixed(2)} ${(-TN.pan[1]).toFixed(2)})`); tnLastPan = key; }
 
   const sh = TN.shape;
-  if (sh.pts.length) {
+  const moving = sh.pts.some((q, i) => Math.abs(sh.tgt[i][0] - q[0]) + Math.abs(sh.tgt[i][1] - q[1]) > 0.05);
+  if (sh.pts.length && (moving || S.liveAmp > 0.002 || !sh.rested)) {
+    sh.rested = !moving && S.liveAmp <= 0.002;
     const k = Math.min(1, dt * 9);
     const live = S.liveAmp;
     sh.pts = sh.pts.map((q, i) => [q[0] + (sh.tgt[i][0] - q[0]) * k, q[1] + (sh.tgt[i][1] - q[1]) * k]);
@@ -804,7 +804,7 @@ function ckUpdate() {
 const intervalsOf = pcs => pcs.map((p, i) => mod(pcs[(i + 1) % pcs.length] - p, 12) || 12);
 function ckSetShape(pcs, f, name, note) {
   const m = retarget(CKS.ang, pcs.map(pc => pc * 30).sort((a, b) => a - b));
-  Object.assign(CKS, { ang: m.start, tgt: m.tgt, pcs: pcs.slice(), color: f.c, ink: f.ink });
+  Object.assign(CKS, { ang: m.start, tgt: m.tgt, pcs: pcs.slice(), color: f.c, ink: f.ink, rested: false });
   ckPoly.style.stroke = f.c;
   ckPoly.style.fill = hexA(f.c, 0.2);
   const ivl = intervalsOf(pcs);
@@ -833,7 +833,10 @@ function ckShowChord(ch, f) {
   ckSetShape(chordPcs(ch), f, chordName(ch), null);
 }
 function ckFrame(dt) {
-  if (!CKS.tgt.length) { ckPoly.setAttribute('d', 'M0 0Z'); return; }
+  if (S.view !== 'clock' || !CKS.tgt.length) return;
+  const moving = CKS.ang.some((a, i) => Math.abs(adiff(CKS.tgt[i], a)) > 0.02);
+  if (!moving && S.liveAmp <= 0.002 && CKS.rested) return;
+  CKS.rested = !moving && S.liveAmp <= 0.002;
   const k = Math.min(1, dt * 9);
   CKS.ang = CKS.ang.map((a, i) => a + adiff(CKS.tgt[i], a) * k);
   const r = CK.node * (1 + 0.025 * S.liveAmp * Math.sin(performance.now() / 200));
@@ -893,6 +896,7 @@ function setView(v, instant) {
   $('#viewBtn').setAttribute('aria-label', `View: ${VIEW_INFO[v].label}. Change view`);
   $('#exHint').textContent = VIEW_INFO[v].hint;
   if (v === 'tonnetz' && !instant) tnRecentre();
+  TN.shape.rested = false; CKS.rested = false; S.blobRested = false; tnLastPan = '';
   if (!instant) { save(); buzz(8); }
 }
 function toggleViewMenu(open) {
@@ -1009,7 +1013,8 @@ function bubble(ch, tag = 'button') {
   b.dataset.root = ch.root; b.dataset.q = ch.q; b.dataset.deg = a.deg;
   b.style.setProperty('--c', f.c);
   b.style.setProperty('--ink', f.ink);
-  b.style.setProperty('--d', `${(-Math.random() * 11).toFixed(2)}s`);
+  const rr = () => 40 + Math.round(Math.random() * 18);
+  b.style.setProperty('--br', `${rr()}% ${rr()}% ${rr()}% ${rr()}% / ${rr()}% ${rr()}% ${rr()}% ${rr()}%`);
   b.innerHTML = `${vizSVG(a)}<span class="num">${a.num || '✦'}</span><span class="nm">${chordName(ch)}</span>`;
   return b;
 }
@@ -1042,7 +1047,7 @@ function showChord(ch, dur, extra = []) {
 
   // chord-shape target on the note ring, matched to minimise travel
   const m = retarget(S.blobA, chordPcs(ch).map(pc => outerIdx(pc) * 30).sort((x, y) => x - y));
-  S.blobA = m.start; S.blobT = m.tgt;
+  S.blobA = m.start; S.blobT = m.tgt; S.blobRested = false;
   tnShowChord(ch, f);
   ckShowChord(ch, f);
   blob.style.fill = hexA(f.c, 0.2);
@@ -1058,7 +1063,7 @@ function showChord(ch, dur, extra = []) {
   pressKeys(ch, f, dur);
 
   const glow = $('#glow');
-  glow.style.backgroundColor = f.c;
+  glow.style.color = f.c;
   retrigger(glow, 'hit');
 
   const matching = $$('.chords .bub').filter(b => +b.dataset.root === ch.root && b.dataset.q === ch.q);
@@ -1176,6 +1181,7 @@ function renderSeq(enterIdx = -1) {
   }
   $('#seqCount').textContent = `${S.seq.length} / 16`;
   if (enterIdx >= 0) box.scrollTo({ left: box.scrollWidth, behavior: 'smooth' });
+  floatCache.n = -1;
 }
 function addToSeq(ch) {
   if (S.seq.length >= 16) { buzz([20, 40, 20]); return; }
@@ -1439,6 +1445,7 @@ function setMode(m) {
   if (S.playing) Player.stop();
   S.mode = m;
   $('.app').dataset.mode = m;
+  activePanel = null;
   const idx = MODES.indexOf(m);
   $$('.panel').forEach(p => {
     const j = MODES.indexOf(p.dataset.mode);
@@ -1470,7 +1477,7 @@ document.addEventListener('keydown', e => {
 const canvases = $$('.wv');
 let dpr = 1;
 function sizeCanvas(cv) {
-  dpr = Math.min(3, window.devicePixelRatio || 1);
+  dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(cv.clientWidth * dpr);
   cv.height = Math.round(cv.clientHeight * dpr);
 }
@@ -1529,13 +1536,14 @@ function drawWave(cv, now) {
     const y = mid - surface(x / w, now) * A;
     x ? g.lineTo(x, y) : g.moveTo(x, y);
   }
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.strokeStyle = hexA(col, 0.22); // soft halo (canvas shadowBlur is very slow on phones)
+  g.lineWidth = 9 * dpr;
+  g.stroke();
   g.strokeStyle = col;
   g.lineWidth = 2.4 * dpr;
-  g.lineCap = 'round';
-  g.shadowColor = col;
-  g.shadowBlur = 12 * dpr;
   g.stroke();
-  g.shadowBlur = 0;
 
   // fade both edges into the pond
   g.globalCompositeOperation = 'destination-in';
@@ -1549,19 +1557,25 @@ function drawWave(cv, now) {
   g.globalCompositeOperation = 'source-over';
 }
 // bubbles bob on the surface beneath them
+const floatCache = { panel: null, n: -1, age: 0, items: [], h: 0 };
 function floatBubbles(panel, cv, now) {
-  const r = cv.getBoundingClientRect();
-  if (!r.width) return;
-  const A = r.height * 0.32;
-  panel.querySelectorAll('.floaty > .bub').forEach(b => {
-    const br = b.getBoundingClientRect();
-    const xn = (br.left + br.width / 2 - r.left) / r.width;
-    b.style.translate = `0 ${(-surface(xn, now) * A * 0.55).toFixed(2)}px`;
-  });
+  const list = panel.querySelectorAll('.floaty > .bub');
+  // re-measure only when the row changes, or every ~half second (scrolling, resizing)
+  if (floatCache.panel !== panel || floatCache.n !== list.length || ++floatCache.age > 30) {
+    const r = cv.getBoundingClientRect();
+    if (!r.width) return;
+    floatCache.items = [...list].map(b => {
+      const br = b.getBoundingClientRect();
+      return { b, xn: (br.left + br.width / 2 - r.left) / r.width };
+    });
+    Object.assign(floatCache, { panel, n: list.length, age: 0, h: r.height });
+  }
+  const A = floatCache.h * 0.32 * 0.55;
+  for (const it of floatCache.items) it.b.style.translate = `0 ${(-surface(it.xn, now) * A).toFixed(1)}px`;
 }
 
 /* ================= animation loop ================= */
-let lastT = performance.now(), lastRot = NaN, lastBloom = NaN;
+let lastT = performance.now(), lastRot = NaN, lastBloom = NaN, activePanel = null;
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now;
@@ -1596,15 +1610,19 @@ function frame(now) {
   const pk = Math.min(1, dt * 9);
   S.blobAlpha += ((S.current ? 1 : 0) - S.blobAlpha) * pk;
   S.liveAmp += ((now < S.liveUntil ? 1 : 0) - S.liveAmp) * Math.min(1, dt * 4);
+  const blobMoving = S.blobA.some((a, j) => Math.abs(adiff(S.blobT[j], a)) > 0.02);
   S.blobA = S.blobA.map((a, j) => a + adiff(S.blobT[j], a) * pk);
-  const pts = S.blobA.map((a, j) => P(R.dots + Math.sin(now / 260 + j * 2.1) * 3.5 * S.liveAmp, a));
-  blob.setAttribute('d', smoothClosed(pts));
-  blob.style.opacity = S.blobAlpha.toFixed(3);
+  if (S.view === 'circle' && (blobMoving || S.liveAmp > 0.002 || Math.abs(S.blobAlpha - (S.current ? 1 : 0)) > 0.002 || !S.blobRested)) {
+    S.blobRested = !blobMoving && S.liveAmp <= 0.002;
+    const pts = S.blobA.map((a, j) => P(R.dots + Math.sin(now / 260 + j * 2.1) * 3.5 * S.liveAmp, a));
+    blob.setAttribute('d', smoothClosed(pts));
+    blob.style.opacity = S.blobAlpha.toFixed(3);
+  }
 
   tnFrame(dt, now);
   ckFrame(dt, now);
 
-  const panel = $('.panel.on'), cv = panel && panel.querySelector('.wv');
+  const panel = activePanel || (activePanel = $('.panel.on')), cv = panel && (panel._wv || (panel._wv = panel.querySelector('.wv')));
   if (cv) { drawWave(cv, now); floatBubbles(panel, cv, now); }
   requestAnimationFrame(frame);
 }
