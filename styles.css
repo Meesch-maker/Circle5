@@ -581,6 +581,36 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .k.ping { animation: ping .28s ease-out; }
 @keyframes ping { 0% { filter: brightness(1.45); } 100% { filter: none; } }
 
+/* ---------- export ---------- */
+.exportbtn {
+  width: 100%; height: 48px; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 24px 20px 24px 18px;
+  background: var(--s1);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--grass) 30%, transparent);
+  color: var(--tx); font-size: 15px; font-weight: 900;
+  transition: transform .4s var(--spring), background .2s;
+}
+.exportbtn svg { color: var(--grass); }
+.exportbtn:active { transform: scale(.95); background: var(--s3); }
+#export { --c: var(--grass); }
+.sheet-sub { font-size: 13px; font-weight: 800; color: var(--mut); font-variant-numeric: tabular-nums; }
+.sheet-chords { font-size: 14px; font-weight: 800; line-height: 1.5; margin-top: 6px; overflow-wrap: anywhere; }
+.exactions { display: flex; gap: 8px; margin-top: 16px; }
+.exactions .play { flex: 1; }
+.exactions [hidden] { display: none; }
+.exactions [hidden] + .exsave { flex: 1; }
+.exsave {
+  flex: 0 0 auto; height: 58px; padding: 0 20px;
+  border-radius: 26px 22px 28px 20px;
+  background: var(--s1); font-size: 16px; font-weight: 900;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--grass) 35%, transparent);
+  transition: transform .4s var(--spring);
+}
+.exsave:active { transform: scale(.94); }
+.exstatus { min-height: 1.4em; margin-top: 8px; font-size: 13px; font-weight: 800; color: var(--grass); overflow-wrap: anywhere; }
+#export .hint { text-align: left; margin-top: 4px; }
+
 /* ---------- flavour sheet ---------- */
 .sheet {
   position: fixed; inset: 0; z-index: 20;

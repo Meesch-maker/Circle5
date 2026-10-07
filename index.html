@@ -98,6 +98,10 @@
         <button class="play" data-play="progress"></button>
         <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
       </div>
+      <button class="exportbtn" data-export="progress">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        Export MIDI
+      </button>
     </div>
 
     <!-- COMPOSE -->
@@ -125,6 +129,10 @@
         </button>
         <div class="bpm"><button data-bpm="-4" aria-label="Slower">−</button><div class="bpm-val"></div><button data-bpm="4" aria-label="Faster">+</button></div>
       </div>
+      <button class="exportbtn" data-export="compose">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        Export MIDI
+      </button>
       <p class="hint">Tap the wheel or a chord to add it · Hold a bubble to drag it, or let go for its flavour · Tap twice to remove</p>
     </div>
   </main>
@@ -136,6 +144,31 @@
       <div class="flopts" id="flExt"></div>
       <div class="sheet-label">Bass note</div>
       <div class="flopts three" id="flBass"></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="export" aria-hidden="true">
+    <div class="sheet-card" role="dialog" aria-labelledby="exTitle">
+      <div class="sheet-head"><h3 id="exTitle">Export MIDI</h3><button id="exClose" aria-label="Close">✕</button></div>
+      <p class="sheet-sub" id="exSummary"></p>
+      <p class="sheet-chords" id="exportChords"></p>
+      <div class="sheet-label">Rhythm</div>
+      <div class="flopts" id="exRhythm">
+        <button data-rhythm="played"><b>As played</b><small id="exStyleNote">your style, voicings and colours</small></button>
+        <button data-rhythm="block"><b>Block chords</b><small>one held chord per bar, easy to rework</small></button>
+      </div>
+      <div class="sheet-label">Length</div>
+      <div class="flopts three" id="exRepeats">
+        <button data-repeats="1"><b>1×</b><small></small></button>
+        <button data-repeats="2"><b>2×</b><small></small></button>
+        <button data-repeats="4"><b>4×</b><small></small></button>
+      </div>
+      <div class="exactions">
+        <button class="play" id="exShare">Share or AirDrop</button>
+        <button class="exsave" id="exSave">Save .mid</button>
+      </div>
+      <p class="exstatus" id="exStatus" role="status"></p>
+      <p class="hint">In Ableton, drag the file into Arrangement View: Chords and Bass arrive as separate tracks, already at your tempo.</p>
     </div>
   </div>
 

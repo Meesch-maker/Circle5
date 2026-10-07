@@ -562,6 +562,84 @@ function play(ch, extra) {
   showChord(ch, 1.4, extra, v);
 }
 
+/* ================= MIDI export ================= */
+// A Standard MIDI File (format 1): a conductor track (tempo, metre, chord-name markers),
+// then Chords and Bass on their own tracks so they land as separate clips in a DAW.
+const PPQ = 480;
+const ascii = t => t.replace(/♭/g, 'b').replace(/♯/g, '#').replace(/ø7/g, 'm7b5').replace(/°7/g, 'dim7').replace(/°/g, 'dim').replace(/[^\x20-\x7e]/g, '');
+const vlq = n => { const out = [n & 0x7f]; while ((n >>= 7)) out.unshift((n & 0x7f) | 0x80); return out; };
+const u32 = n => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+const metaText = (type, text) => { const b = [...new TextEncoder().encode(text)]; return [0xff, type, ...vlq(b.length), ...b]; };
+function trackChunk(events, endTick = 0) {
+  // offs before ons at the same tick, so a repeated note is never cut by its own release
+  events.sort((a, b) => a.tick - b.tick || a.order - b.order);
+  const body = [];
+  let last = 0;
+  for (const e of events) { body.push(...vlq(e.tick - last), ...e.data); last = e.tick; }
+  body.push(...vlq(Math.max(0, endTick - last)), 0xff, 0x2f, 0x00); // track ends exactly at the loop length
+  return [0x4d, 0x54, 0x72, 0x6b, ...u32(body.length), ...body];
+}
+// notes: [{ start, end, note, vel, ch }] in ticks; same-pitch overlaps are trimmed so DAWs read them cleanly
+function noteEvents(notes, ch, endTick) {
+  const byPitch = new Map();
+  notes.slice().sort((a, b) => a.start - b.start).forEach(n => {
+    const prev = byPitch.get(n.note);
+    if (prev && prev.end > n.start) prev.end = Math.max(prev.start + 1, n.start);
+    byPitch.set(n.note, n);
+  });
+  const ev = [];
+  for (const n of notes) {
+    if (endTick) n.end = Math.min(n.end, endTick); // nothing rings past the loop
+    if (n.note < 0 || n.note > 127 || n.end <= n.start) continue;
+    ev.push({ tick: n.start, order: 1, data: [0x90 | ch, n.note, n.vel] });
+    ev.push({ tick: n.end, order: 0, data: [0x80 | ch, n.note, 0] });
+  }
+  return ev;
+}
+const midiVel = (gain, ref) => Math.max(24, Math.min(127, Math.round(gain / ref * 100)));
+// Turn a list of chords into MIDI bytes. rhythm: 'played' (the current style) or 'block'.
+function buildMidi(list, { rhythm = 'played', repeats = 1, name = 'Circle5' } = {}) {
+  const st = STYLES[S.style], beats = st.beats, bar = beats * PPQ;
+  const chords = [], bass = [], markers = [];
+  const saved = [lastVoice, lastBass];
+  lastVoice = null; lastBass = 43; // start fresh so the file is the same every time
+  let b = 0;
+  for (let r = 0; r < repeats; r++) {
+    for (const ch of list) {
+      const v = voiceFor(ch), t0 = b * bar;
+      markers.push({ tick: t0, order: 2, data: metaText(0x06, ascii(v.label)) });
+      if (rhythm === 'block') {
+        v.notes.forEach(m => chords.push({ start: t0, end: t0 + bar - 12, note: m, vel: m === v.top ? 92 : 78 }));
+        bass.push({ start: t0, end: t0 + bar - 12, note: v.bass, vel: 90 });
+      } else {
+        for (const e of pattern(S.style, v)) {
+          const start = t0 + Math.round(e.at * PPQ), len = Math.round(e.dur * PPQ);
+          const strum = Math.round((e.strum || 0) * (S.bpm / 60) * PPQ);
+          e.notes.forEach((m, j) => {
+            const top = !e.bass && m === v.top;
+            const vel = midiVel(e.vel * (top ? 1.3 : 1), e.bass ? 0.2 : 0.15) + Math.round((Math.random() - 0.5) * 8);
+            (e.bass ? bass : chords).push({ start: start + j * strum, end: start + j * strum + len, note: m, vel: Math.max(1, Math.min(127, vel)) });
+          });
+        }
+      }
+      b++;
+    }
+  }
+  [lastVoice, lastBass] = saved;
+  const total = b * bar;
+  const usPerBeat = Math.round(60000000 / S.bpm);
+  const conductor = trackChunk([
+    { tick: 0, order: 0, data: metaText(0x03, ascii(name)) },
+    { tick: 0, order: 0, data: [0xff, 0x51, 0x03, (usPerBeat >> 16) & 255, (usPerBeat >> 8) & 255, usPerBeat & 255] },
+    { tick: 0, order: 0, data: [0xff, 0x58, 0x04, beats, 2, 24, 8] },
+    ...markers,
+  ], total);
+  const chordTrack = trackChunk([{ tick: 0, order: -1, data: metaText(0x03, 'Chords') }, ...noteEvents(chords, 0, total)], total);
+  const bassTrack = trackChunk([{ tick: 0, order: -1, data: metaText(0x03, 'Bass') }, ...noteEvents(bass, 1, total)], total);
+  const header = [0x4d, 0x54, 0x68, 0x64, ...u32(6), 0, 1, 0, 3, (PPQ >> 8) & 255, PPQ & 255];
+  return new Uint8Array([...header, ...conductor, ...chordTrack, ...bassTrack]);
+}
+
 /* ================= sequencer ================= */
 const Player = {
   timer: null, nextTime: 0, idx: 0, get: null, onStep: null, mode: null,
@@ -1727,18 +1805,89 @@ function flavourChanged() {
 $('#flClose').addEventListener('click', closeFlavour);
 $('#flavour').addEventListener('click', e => { if (e.target.id === 'flavour') closeFlavour(); });
 
+/* ================= export sheet ================= */
+const EXP = { source: 'compose', rhythm: 'played', repeats: 1 };
+const slug = t => ascii(t).toLowerCase().replace(/#/g, 's').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const exportList = () => EXP.source === 'progress' ? progChords() : S.seq;
+function exportNames() {
+  const what = EXP.source === 'progress' ? SYS().progs[S.prog].name : 'My progression';
+  return { title: `Circle5 · ${what} · ${keyName()}`, file: `circle5-${slug(what)}-${slug(keyName())}-${S.bpm}bpm.mid` };
+}
+function canShareFiles() {
+  try { return !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], 'x.mid', { type: 'audio/midi' })] }); }
+  catch (e) { return false; }
+}
+function openExport(source) {
+  EXP.source = source;
+  if (!exportList().length) { buzz([20, 40, 20]); retrigger($('#seq'), 'swap'); return; }
+  if (S.playing) Player.stop();
+  renderExport();
+  $('#exStatus').textContent = '';
+  $('#export').classList.add('open');
+  $('#export').setAttribute('aria-hidden', 'false');
+}
+function closeExport() {
+  $('#export').classList.remove('open');
+  $('#export').setAttribute('aria-hidden', 'true');
+}
+function renderExport() {
+  const list = exportList(), beats = STYLES[S.style].beats;
+  $('#exSummary').textContent = `${list.length} chord${list.length > 1 ? 's' : ''} · ${keyName()} · ${S.bpm} BPM · ${beats}/4`;
+  // show the names exactly as they'll be written (voiced from a fresh start, like the file)
+  const saved = [lastVoice, lastBass];
+  lastVoice = null; lastBass = 43;
+  $('#exportChords').textContent = list.map(ch => voiceFor(ch).label).join('  →  ');
+  [lastVoice, lastBass] = saved;
+  $('#exStyleNote').textContent = `${STYLES[S.style].name} pattern, your voicings and colours`;
+  $$('#exRhythm [data-rhythm]').forEach(b => b.classList.toggle('on', b.dataset.rhythm === EXP.rhythm));
+  $$('#exRepeats [data-repeats]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.repeats === EXP.repeats);
+    b.querySelector('small').textContent = `${list.length * +b.dataset.repeats} bars`;
+  });
+  $('#exShare').hidden = !canShareFiles();
+}
+function exportFile() {
+  const { title, file } = exportNames();
+  const bytes = buildMidi(exportList(), { rhythm: EXP.rhythm, repeats: EXP.repeats, name: title });
+  return new File([bytes], file, { type: 'audio/midi' });
+}
+function saveFile(f) {
+  const url = URL.createObjectURL(f);
+  const a = document.createElement('a');
+  a.href = url; a.download = f.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  $('#exStatus').textContent = `Saved ${f.name}`;
+}
+$('#exSave').addEventListener('click', () => { saveFile(exportFile()); buzz(10); });
+$('#exShare').addEventListener('click', async () => {
+  const f = exportFile();
+  try {
+    await navigator.share({ files: [f], title: exportNames().title });
+    $('#exStatus').textContent = `Shared ${f.name}`;
+  } catch (err) {
+    if (err && err.name === 'AbortError') return; // closed the share sheet
+    saveFile(f); // sharing isn't available here, so save it instead
+  }
+});
+$$('#exRhythm [data-rhythm]').forEach(b => b.addEventListener('click', () => { EXP.rhythm = b.dataset.rhythm; renderExport(); buzz(6); }));
+$$('#exRepeats [data-repeats]').forEach(b => b.addEventListener('click', () => { EXP.repeats = +b.dataset.repeats; renderExport(); buzz(6); }));
+$$('[data-export]').forEach(b => b.addEventListener('click', () => openExport(b.dataset.export)));
+$('#exClose').addEventListener('click', closeExport);
+$('#export').addEventListener('click', e => { if (e.target.id === 'export') closeExport(); });
+
 /* ================= transport ================= */
 const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
 const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="4"/></svg>';
 function updatePlayButtons() {
-  $$('.play').forEach(b => {
+  $$('.play[data-play]').forEach(b => {
     const on = S.playing && Player.mode === b.dataset.play;
     b.classList.toggle('on', on);
     b.innerHTML = on ? `${ICON_STOP}Stop` : `${ICON_PLAY}Play`;
   });
 }
 function updateBpm() { $$('.bpm-val').forEach(v => { v.innerHTML = `${S.bpm}<small>BPM</small>`; }); }
-$$('.play').forEach(b => b.addEventListener('click', () => {
+$$('.play[data-play]').forEach(b => b.addEventListener('click', () => {
   if (S.playing) { Player.stop(); return; }
   if (b.dataset.play === 'progress') startProgress();
   else if (S.seq.length) startCompose();
@@ -1939,6 +2088,7 @@ function setMode(m) {
   $('#ind').style.transform = `translateX(${idx * 100}%)`;
   if (m === 'progress') renderSteps(true);
   closeFlavour();
+  closeExport();
   buzz(6);
 }
 $$('.tab').forEach(t => t.addEventListener('click', () => setMode(t.dataset.tab)));
